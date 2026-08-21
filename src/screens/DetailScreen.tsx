@@ -1,44 +1,73 @@
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  Image, 
-  ScrollView, 
-  TouchableOpacity, 
-  TextInput, 
-  Alert 
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { Proyecto } from '../types';
+import { agregarSolicitudCredito } from '../services/storage';
 
 interface Props {
   proyecto: Proyecto;
   onBack: () => void;
+  onSolicitudExitosa?: () => void;
 }
 
-export const DetailScreen = ({ proyecto, onBack }: Props) => {
+export const DetailScreen = ({ proyecto, onBack, onSolicitudExitosa }: Props) => {
   const [nombreAsociado, setNombreAsociado] = useState('');
   const [telefono, setTelefono] = useState('');
   const [montoSolicitado, setMontoSolicitado] = useState('');
+  const [enviando, setEnviando] = useState(false);
 
-  const enviarSolicitud = () => {
+  const enviarSolicitud = async () => {
     if (!nombreAsociado.trim() || !telefono.trim()) {
       Alert.alert('Campos incompletos', 'Por favor ingresa tu nombre y número de contacto.');
       return;
     }
 
-    Alert.alert(
-      '¡Solicitud Registrada!',
-      `Gracias ${nombreAsociado}. Un asesor de la Cooperativa te contactará pronto para el proyecto "${proyecto.nombre}".`,
-      [{ text: 'Aceptar', onPress: onBack }]
-    );
+    try {
+      setEnviando(true);
+      await agregarSolicitudCredito({
+        proyectoId: proyecto.id,
+        nombreProyecto: proyecto.nombre,
+        nombreAsociado,
+        telefono,
+        montoSolicitado: montoSolicitado.trim() ? `$${montoSolicitado}` : proyecto.precio,
+      });
+
+      Alert.alert(
+        '¡Solicitud Registrada!',
+        `Gracias ${nombreAsociado}. Tu solicitud para "${proyecto.nombre}" ha sido guardada. Puedes consultar su estado en la pestaña "Mis Solicitudes".`,
+        [
+          {
+            text: 'Aceptar',
+            onPress: () => {
+              if (onSolicitudExitosa) {
+                onSolicitudExitosa();
+              } else {
+                onBack();
+              }
+            },
+          },
+        ]
+      );
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo guardar la solicitud. Intenta nuevamente.');
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
     <ScrollView style={styles.pantalla}>
       {/* Botón regresar */}
       <TouchableOpacity style={styles.botonVolver} onPress={onBack}>
-        <Text style={styles.textoVolver}>← Volver a proyectos</Text>
+        <Text style={styles.textoVolver}>← Volver a la lista de proyectos</Text>
       </TouchableOpacity>
 
       {/* Foto del proyecto */}
@@ -86,7 +115,7 @@ export const DetailScreen = ({ proyecto, onBack }: Props) => {
         <View style={styles.formularioCaja}>
           <Text style={styles.formTitulo}>Solicitar Crédito / Asesoría</Text>
           <Text style={styles.formSubtitulo}>
-            Completa tus datos para recibir estudio de crédito sin costo.
+            Completa tus datos para recibir estudio de crédito habitacional sin costo.
           </Text>
 
           <Text style={styles.labelInput}>Nombre completo:</Text>
@@ -109,14 +138,20 @@ export const DetailScreen = ({ proyecto, onBack }: Props) => {
           <Text style={styles.labelInput}>Monto a financiar estimado (opcional):</Text>
           <TextInput
             style={styles.input}
-            placeholder="Ej. $80.000.000"
+            placeholder="Ej. 80000000"
             keyboardType="numeric"
             value={montoSolicitado}
             onChangeText={setMontoSolicitado}
           />
 
-          <TouchableOpacity style={styles.botonEnviar} onPress={enviarSolicitud}>
-            <Text style={styles.textoBotonEnviar}>Enviar Solicitud de Vivienda</Text>
+          <TouchableOpacity
+            style={[styles.botonEnviar, enviando && styles.botonDeshabilitado]}
+            onPress={enviarSolicitud}
+            disabled={enviando}
+          >
+            <Text style={styles.textoBotonEnviar}>
+              {enviando ? 'Guardando...' : 'Enviar Solicitud de Vivienda'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -271,6 +306,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 16,
+  },
+  botonDeshabilitado: {
+    backgroundColor: '#94a3b8',
   },
   textoBotonEnviar: {
     color: '#ffffff',

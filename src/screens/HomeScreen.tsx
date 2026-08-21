@@ -1,20 +1,34 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TextInput, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Header } from '../components/Header';
 import { ItemCard } from '../components/ItemCard';
-import { listaProyectos } from '../data/mockData';
 import { Proyecto } from '../types';
+import {
+  getProyectosPersistidos,
+  guardarProyectoNuevo,
+  getFavoritosPersistidos,
+  guardarFavoritosPersistidos,
+} from '../services/storage';
 
 interface Props {
   onSelectProyecto: (proyecto: Proyecto) => void;
 }
 
-// Pantalla principal
 export const HomeScreen = ({ onSelectProyecto }: Props) => {
-  const [proyectos, setProyectos] = useState<Proyecto[]>(listaProyectos);
+  const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [favoritosIds, setFavoritosIds] = useState<string[]>([]);
   const [soloFavoritos, setSoloFavoritos] = useState(false);
+  const [cargando, setCargando] = useState(true);
 
   // Estado para el formulario de nuevo proyecto
   const [mostrarFormNuevo, setMostrarFormNuevo] = useState(false);
@@ -22,13 +36,38 @@ export const HomeScreen = ({ onSelectProyecto }: Props) => {
   const [nuevaCiudad, setNuevaCiudad] = useState('');
   const [nuevoPrecio, setNuevoPrecio] = useState('');
 
-  // Toggle de favorito
-  const toggleFavorito = (id: string) => {
-    if (favoritosIds.includes(id)) {
-      setFavoritosIds(favoritosIds.filter((favId) => favId !== id));
-    } else {
-      setFavoritosIds([...favoritosIds, id]);
+  // Cargar datos persistidos
+  const cargarDatos = useCallback(async () => {
+    try {
+      const [proys, favs] = await Promise.all([
+        getProyectosPersistidos(),
+        getFavoritosPersistidos(),
+      ]);
+      setProyectos(proys);
+      setFavoritosIds(favs);
+    } catch (e) {
+      console.error('Error cargando datos de inicio:', e);
+    } finally {
+      setCargando(false);
     }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      cargarDatos();
+    }, [cargarDatos])
+  );
+
+  // Toggle de favorito con persistencia
+  const toggleFavorito = async (id: string) => {
+    let nuevosIds: string[];
+    if (favoritosIds.includes(id)) {
+      nuevosIds = favoritosIds.filter((favId) => favId !== id);
+    } else {
+      nuevosIds = [...favoritosIds, id];
+    }
+    setFavoritosIds(nuevosIds);
+    await guardarFavoritosPersistidos(nuevosIds);
   };
 
   // Filtrado de proyectos por nombre, ciudad y favoritos
@@ -36,37 +75,45 @@ export const HomeScreen = ({ onSelectProyecto }: Props) => {
     const coincideTexto =
       item.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       item.ciudad.toLowerCase().includes(busqueda.toLowerCase());
-    
+
     const coincideFavorito = soloFavoritos ? favoritosIds.includes(item.id) : true;
     return coincideTexto && coincideFavorito;
   });
 
-  // Agregar un nuevo proyecto a la lista en tiempo real
-  const agregarNuevoProyecto = () => {
+  // Agregar un nuevo proyecto a la lista con persistencia local
+  const agregarNuevoProyecto = async () => {
     if (!nuevoNombre.trim() || !nuevaCiudad.trim() || !nuevoPrecio.trim()) {
       Alert.alert('Formulario incompleto', 'Por favor llena nombre, ciudad y precio del proyecto.');
       return;
     }
 
+    const valorPrecio = parseInt(nuevoPrecio.replace(/\D/g, '')) || 100000000;
+
     const nuevoItem: Proyecto = {
       id: Date.now().toString(),
       nombre: nuevoNombre,
       ciudad: nuevaCiudad,
-      precio: `$${nuevoPrecio}`,
-      imagen: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=500&q=80',
-      descripcion: 'Nuevo proyecto registrado en la Cooperativa de Vivienda.',
+      precio: `$${valorPrecio.toLocaleString('es-CO')}`,
+      imagen:
+        'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=500&q=80',
+      descripcion: 'Nuevo proyecto residencial registrado en la Cooperativa de Vivienda.',
       area: '60 m²',
       habitaciones: 3,
       banos: 2,
-      cuotaInicial: `$${(parseInt(nuevoPrecio.replace(/\D/g, '')) * 0.1 || 10000000).toLocaleString()}`,
+      cuotaInicial: `$${Math.round(valorPrecio * 0.1).toLocaleString('es-CO')}`,
     };
 
-    setProyectos([nuevoItem, ...proyectos]);
-    setNuevoNombre('');
-    setNuevaCiudad('');
-    setNuevoPrecio('');
-    setMostrarFormNuevo(false);
-    Alert.alert('¡Éxito!', 'Proyecto agregado correctamente.');
+    try {
+      const listaActualizada = await guardarProyectoNuevo(nuevoItem);
+      setProyectos(listaActualizada);
+      setNuevoNombre('');
+      setNuevaCiudad('');
+      setNuevoPrecio('');
+      setMostrarFormNuevo(false);
+      Alert.alert('¡Proyecto Creado!', 'El nuevo proyecto ha sido guardado exitosamente.');
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo guardar el nuevo proyecto.');
+    }
   };
 
   const renderHeaderComponent = () => (
@@ -150,7 +197,7 @@ export const HomeScreen = ({ onSelectProyecto }: Props) => {
           />
           <TextInput
             style={styles.inputForm}
-            placeholder="Precio total (Ej. 130000000)"
+            placeholder="Precio total en COP (Ej. 130000000)"
             keyboardType="numeric"
             value={nuevoPrecio}
             onChangeText={setNuevoPrecio}
@@ -185,15 +232,15 @@ export const HomeScreen = ({ onSelectProyecto }: Props) => {
         data={proyectosFiltrados}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <ItemCard 
-            proyecto={item} 
+          <ItemCard
+            proyecto={item}
             onSelect={onSelectProyecto}
             esFavorito={favoritosIds.includes(item.id)}
             onToggleFavorito={toggleFavorito}
           />
         )}
         ListHeaderComponent={renderHeaderComponent}
-        ListEmptyComponent={renderEmptyComponent}
+        ListEmptyComponent={!cargando ? renderEmptyComponent : null}
         contentContainerStyle={styles.listContainer}
       />
     </View>
@@ -371,5 +418,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
-
