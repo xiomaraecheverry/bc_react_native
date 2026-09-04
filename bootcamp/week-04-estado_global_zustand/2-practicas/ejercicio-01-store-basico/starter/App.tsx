@@ -1,10 +1,8 @@
 // App.tsx — Ejercicio 01: Store Básico con Zustand
-// Este ejercicio muestra cómo crear stores Zustand tipados y consumirlos
+// Demostración completa de stores Zustand tipados y consumidos
 // en múltiples componentes sin prop drilling.
-//
-// INSTRUCCIONES: Ve descomentando los PASOx en orden.
-// Cada paso depende del anterior para funcionar correctamente.
 
+import React, { useState } from 'react';
 import { create } from 'zustand';
 import {
   FlatList,
@@ -15,88 +13,60 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useState } from 'react';
 
 // ============================================================
-// PASO 1 — Definir y crear el store Counter
+// PASO 1 — Store Counter
 // ============================================================
-// Un store Zustand tiene dos partes en la misma definición:
-//   - Estado (datos)
-//   - Acciones (funciones que modifican el estado)
-//
-// `set` recibe una función que devuelve el estado parcialmente actualizado.
-// Nunca se mutala el estado directamente (igual que con useState).
+interface CounterStore {
+  count: number;
+  increment: () => void;
+  decrement: () => void;
+  reset: () => void;
+}
 
-// Descomenta las siguientes líneas:
-// interface CounterStore {
-//   count: number;
-//   increment: () => void;
-//   decrement: () => void;
-//   reset: () => void;
-// }
-//
-// const useCounterStore = create<CounterStore>((set) => ({
-//   // Estado inicial
-//   count: 0,
-//   // Acciones
-//   increment: () => set((state) => ({ count: state.count + 1 })),
-//   decrement: () => set((state) => ({ count: state.count - 1 })),
-//   reset: () => set({ count: 0 }),
-// }));
+const useCounterStore = create<CounterStore>((set) => ({
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+  decrement: () => set((state) => ({ count: state.count - 1 })),
+  reset: () => set({ count: 0 }),
+}));
 
 // ============================================================
-// PASO 3 — Definir y crear el store Todo
+// PASO 3 — Store Todo
 // ============================================================
-// Un segundo store completamente independiente.
-// Puedes tener tantos stores como necesites.
+interface Todo {
+  id: string;
+  text: string;
+}
 
-// Descomenta las siguientes líneas:
-// interface Todo {
-//   id: string;
-//   text: string;
-// }
-//
-// interface TodoStore {
-//   todos: Todo[];
-//   addTodo: (text: string) => void;
-//   removeTodo: (id: string) => void;
-// }
-//
-// const useTodoStore = create<TodoStore>((set) => ({
-//   todos: [],
-//   addTodo: (text) =>
-//     set((state) => ({
-//       todos: [
-//         ...state.todos,
-//         { id: Date.now().toString(), text },
-//       ],
-//     })),
-//   removeTodo: (id) =>
-//     set((state) => ({
-//       todos: state.todos.filter((t) => t.id !== id),
-//     })),
-// }));
+interface TodoStore {
+  todos: Todo[];
+  addTodo: (text: string) => void;
+  removeTodo: (id: string) => void;
+}
+
+const useTodoStore = create<TodoStore>((set) => ({
+  todos: [],
+  addTodo: (text) =>
+    set((state) => ({
+      todos: [...state.todos, { id: Date.now().toString(), text }],
+    })),
+  removeTodo: (id) =>
+    set((state) => ({
+      todos: state.todos.filter((t) => t.id !== id),
+    })),
+}));
 
 // ============================================================
-// PANTALLA PRINCIPAL
+// COMPONENTES
 // ============================================================
 
 function CounterSection(): React.JSX.Element {
-  // PASO 2 — Consumir el store Counter con selectores
-  // Cada selector solo extrae la parte del store que necesita.
-  // Este componente solo re-renderiza cuando `count` cambia.
-  //
-  // Descomenta las siguientes líneas:
-  // const count = useCounterStore((state) => state.count);
-  // const increment = useCounterStore((state) => state.increment);
-  // const decrement = useCounterStore((state) => state.decrement);
-  // const reset = useCounterStore((state) => state.reset);
-
-  // Placeholder que desaparece cuando descomentas el PASO 2:
-  const count = 0;
-  const increment = () => {};
-  const decrement = () => {};
-  const reset = () => {};
+  // PASO 2 — Consumir con selectores
+  const count = useCounterStore((state) => state.count);
+  const increment = useCounterStore((state) => state.increment);
+  const decrement = useCounterStore((state) => state.decrement);
+  const reset = useCounterStore((state) => state.reset);
 
   return (
     <View style={styles.card}>
@@ -120,17 +90,9 @@ function CounterSection(): React.JSX.Element {
 function TodoSection(): React.JSX.Element {
   const [inputText, setInputText] = useState('');
 
-  // PASO 3 — Consumir el store Todo con selectores
-  //
-  // Descomenta las siguientes líneas:
-  // const todos = useTodoStore((state) => state.todos);
-  // const addTodo = useTodoStore((state) => state.addTodo);
-  // const removeTodo = useTodoStore((state) => state.removeTodo);
-
-  // Placeholders:
-  const todos: { id: string; text: string }[] = [];
-  const addTodo = (_text: string) => {};
-  const removeTodo = (_id: string) => {};
+  const todos = useTodoStore((state) => state.todos);
+  const addTodo = useTodoStore((state) => state.addTodo);
+  const removeTodo = useTodoStore((state) => state.removeTodo);
 
   function handleAdd(): void {
     if (inputText.trim() === '') return;
@@ -174,23 +136,18 @@ function TodoSection(): React.JSX.Element {
   );
 }
 
-// PASO 4 — Componente separado que lee el mismo store sin recibir props
-// Esta es la demostración clave: StatsPanel no recibe ningún prop,
-// pero puede leer el useTodoStore directamente desde cualquier lugar del árbol.
-//
-// Descomenta la siguiente función (y el import correspondiente):
-// function StatsPanel(): React.JSX.Element {
-//   // Selector: derivar un valor calculado del estado
-//   const totalCount = useTodoStore((state) => state.todos.length);
-//   return (
-//     <View style={styles.statsPanel}>
-//       <Text style={styles.statsText}>Tareas en el store: {totalCount}</Text>
-//       <Text style={styles.statsHint}>
-//         (Sin prop drilling — lee el store directamente)
-//       </Text>
-//     </View>
-//   );
-// }
+// PASO 4 — Componente separado que lee el store sin prop drilling
+function StatsPanel(): React.JSX.Element {
+  const totalCount = useTodoStore((state) => state.todos.length);
+  return (
+    <View style={styles.statsPanel}>
+      <Text style={styles.statsText}>Tareas en el store: {totalCount}</Text>
+      <Text style={styles.statsHint}>
+        (Sin prop drilling — lee el store directamente)
+      </Text>
+    </View>
+  );
+}
 
 export default function App(): React.JSX.Element {
   return (
@@ -198,8 +155,7 @@ export default function App(): React.JSX.Element {
       <Text style={styles.title}>Ejercicio 01 — Store Básico</Text>
       <CounterSection />
       <TodoSection />
-      {/* PASO 4 — Descomenta la siguiente línea cuando actives StatsPanel: */}
-      {/* <StatsPanel /> */}
+      <StatsPanel />
     </SafeAreaView>
   );
 }

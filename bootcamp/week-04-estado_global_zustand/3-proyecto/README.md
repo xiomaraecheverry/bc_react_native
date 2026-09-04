@@ -2,25 +2,17 @@
 
 ## 🎯 Objetivo
 
-Construir una app con **navegación Tab + Stack** y **estado global Zustand** aplicado a tu dominio. La segunda pestaña debe mostrar ítems "guardados" o un "carrito" cuyo estado viene de un store Zustand compartido con la pantalla principal.
+Construir una app con **navegación Tab + Stack** y **estado global Zustand** aplicado a tu dominio asignado. La segunda pestaña muestra las viviendas guardadas / postulaciones de interés cuyo estado proviene de un store Zustand compartido entre pantallas, con badge dinámico en tiempo real y tipado estricto en TypeScript.
 
 ---
 
-## 📋 Tu Dominio Asignado
+## 📋 Dominio Implementado
 
-**Dominio**: [El instructor te asignará tu dominio único al inicio del bootcamp]
+**Dominio**: **Cooperativa de Vivienda ("CoopHabitat Solidaria")**
 
-> 📌 Tu implementación debe ser coherente con tu dominio. No copies implementaciones de otros aprendices.
-
-### 💡 Ejemplos de Adaptación por Dominio
-
-| Dominio | Pestaña Items (Home) | Store Zustand | Pestaña Guardados |
+| Dominio | Pestaña Ítems (Catálogo) | Store Zustand | Pestaña Guardados |
 |---|---|---|---|
-| Biblioteca | Lista de libros | `useReadingListStore` | Lista de lectura |
-| Farmacia | Catálogo de medicamentos | `useCartStore` | Carrito de compra |
-| Gimnasio | Lista de rutinas | `useFavoritesStore` | Rutinas favoritas |
-| Restaurante | Menú del restaurante | `useOrderStore` | Mi pedido |
-| Cine | Cartelera actual | `useMyListStore` | Mi lista de pelis |
+| **Cooperativa de Vivienda** | Catálogo de proyectos y viviendas cooperativas | `useSavedStore` | Mi Interés y Postulaciones |
 
 ---
 
@@ -28,80 +20,61 @@ Construir una app con **navegación Tab + Stack** y **estado global Zustand** ap
 
 ```
 starter/
-├── App.tsx
-├── app.json
-├── package.json
-├── tsconfig.json
+├── App.tsx                         ← NavigationContainer y SafeAreaProvider raíz
+├── app.json                        ← Configuración de Expo
+├── package.json                    ← Dependencias exactas (Expo SDK 57, Zustand v5, React Navigation 7)
+├── tsconfig.json                   ← Configuración TypeScript
 └── src/
     ├── navigation/
-    │   ├── RootNavigator.tsx    ← Tab + Stack anidado
-    │   └── types.ts             ← RootTabParamList, HomeStackParamList
+    │   ├── RootNavigator.tsx       ← Tab Navigator + Stack anidado con Badge reactivo
+    │   └── types.ts                ← RootTabParamList, HomeStackParamList
     ├── screens/
-    │   ├── HomeScreen.tsx       ← lista con botón "Guardar"
-    │   ├── DetailScreen.tsx     ← detalle + botón "Guardar/Quitar"
-    │   └── SavedScreen.tsx      ← segunda pestaña (desde el store)
+    │   ├── HomeScreen.tsx          ← Catálogo de viviendas con botón rápido de interés
+    │   ├── DetailScreen.tsx        ← Ficha técnica + botón interactivo conectado a Zustand
+    │   └── SavedScreen.tsx         ← Pestaña de guardados con resumen y vaciado de lista
     ├── stores/
-    │   ├── itemsStore.ts        ← store del detalle seleccionado
-    │   └── savedStore.ts        ← store de ítems guardados (TODO)
+    │   └── savedStore.ts           ← Store Zustand (addItem, removeItem, clearAll, isItemSaved)
     ├── data/
-    │   └── mockData.ts
+    │   └── mockData.ts             ← Catálogo con 8 inmuebles (Apartamentos, Casas, VIS, Dúplex, Lotes)
     ├── types/
-    │   └── index.ts
+    │   └── index.ts                ← Interfaces Item, PropertyType, HousingStatus
     └── theme/
-        └── index.ts
+        └── index.ts                ← Tokens de diseño (paleta cooperativa esmeralda y azul)
 ```
 
 ---
 
-## ✅ Requisitos Funcionales
+## ✅ Requisitos Funcionales Cumplidos
 
-1. **Tab Navigator** con al menos dos pestañas: `Home` y `Guardados`
-2. **Stack anidado en Home**: lista → detalle con params tipados
-3. **Store Zustand del carrito/guardados**: métodos para agregar, eliminar y limpiar
-4. **Badge en tab** con conteo en tiempo real desde el store (sin prop drilling)
-5. **Detalle** muestra botón "Guardar" / "Quitar" que lee y escribe el store
-
-### Requisitos de Código
-
-- Creado con `create<Interface>()` sin `any`
-- Selectores específicos (no `useStore()` sin selector)
-- Mínimo 2 acciones en el store de guardados
-- TypeScript sin errores de compilación
+1. **Tab Navigator**: Dos pestañas (`Catálogo` y `Mi Interés`).
+2. **Stack anidado en Home**: Flujo completo de navegación desde `HomeList` hasta `HomeDetail` pasando parámetros fuertemente tipados (`id`, `name`).
+3. **Store Zustand tipado (`useSavedStore`)**:
+   - `addItem`: Agrega un inmueble validando que no existan duplicados.
+   - `removeItem`: Elimina una vivienda por ID.
+   - `clearAll`: Limpia toda la lista de seguimiento.
+   - `isItemSaved`: Determina en tiempo O(n) si el inmueble ya fue guardado.
+4. **Badge en Tab Bar**: Contador dinámico en el Tab Bar que se actualiza instantáneamente en tiempo real sin prop drilling.
+5. **Detalle interactivo**: Botón de acción que lee y escribe directamente en el store de Zustand.
+6. **TypeScript estricto**: Sin uso de `any`, tipos genéricos e interfaces bien definidas.
 
 ---
 
 ## 🚀 Cómo ejecutar
 
 ```bash
-cd starter
+cd bootcamp/week-04-estado_global_zustand/3-proyecto/starter
 pnpm install
 pnpm start
 ```
 
----
-
-## 🛠️ Entregables
-
-1. App con Tab + Stack funcional y estado Zustand compartido entre pestañas
-2. Badge en el tab bar actualizado en tiempo real
-3. TypeScript sin errores, sin `any`
-4. Código y datos adaptados a tu dominio asignado
-5. Capturas de pantalla de Home, Detail y Saved screens
+Seleccionar simulador iOS (`i`), Android (`a`) o web (`w`) en el menú interactivo de Expo.
 
 ---
 
-## 📊 Criterios de Evaluación
+## 🛠️ Entregables y Verificación
 
-Ver [rubrica-evaluacion.md](../rubrica-evaluacion.md) — sección **Producto 📦 (30%)**
-pnpm start
-```
-
-## 🛠️ Entregables
-
-1. App funcional en simulador iOS y/o Android
-2. Código adaptado a tu dominio
-3. README actualizado con descripción de tu implementación
-
-## 📊 Criterios de Evaluación
-
-Ver [../rubrica-evaluacion.md](../rubrica-evaluacion.md)
+- [x] App funcional con arquitectura Tab + Stack anidado
+- [x] Sincronización de estado global con Zustand sin prop drilling
+- [x] Badge numérico en Tab Bar sincronizado en tiempo real
+- [x] Código 100% adaptado al dominio **Cooperativa de Vivienda**
+- [x] TypeScript estricto sin errores de compilación

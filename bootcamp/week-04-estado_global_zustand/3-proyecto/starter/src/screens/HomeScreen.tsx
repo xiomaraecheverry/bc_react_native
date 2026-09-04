@@ -1,10 +1,10 @@
 // src/screens/HomeScreen.tsx
-// Pantalla principal: lista de ítems con navegación al detalle.
-// El estudiante debe adaptar el diseño y los campos a su dominio.
+// Pantalla de catálogo de proyectos de vivienda para asociados
 
 import React from 'react';
 import {
   FlatList,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -13,66 +13,114 @@ import {
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { ITEMS } from '../data/mockData';
+import { useSavedStore } from '../stores/savedStore';
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
 import type { Item } from '../types';
 import type { HomeStackParamList } from '../navigation/types';
 
 type HomeScreenNavProp = NativeStackNavigationProp<HomeStackParamList, 'HomeList'>;
 
-// ============================================================
-// SUB-COMPONENTE: ItemCard
-// ============================================================
-// TODO: adaptar la tarjeta a las propiedades específicas de tu dominio.
-//   Mostrar, por ejemplo, price (Farmacia), author (Biblioteca), etc.
-
-interface ItemCardProps {
+interface ProjectCardProps {
   item: Item;
   onPress: () => void;
 }
 
-function ItemCard({ item, onPress }: ItemCardProps): React.JSX.Element {
+function ProjectCard({ item, onPress }: ProjectCardProps): React.JSX.Element {
+  const isSaved = useSavedStore((state) => state.isItemSaved(item.id));
+  const addItem = useSavedStore((state) => state.addItem);
+  const removeItem = useSavedStore((state) => state.removeItem);
+
+  const handleToggleBookmark = (e: any): void => {
+    e?.stopPropagation?.();
+    if (isSaved) {
+      removeItem(item.id);
+    } else {
+      addItem(item);
+    }
+  };
+
   return (
-    <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-      onPress={onPress}
-      testID={`item-card-${item.id}`}
-    >
-      {/* Placeholder del thumbnail */}
-      <View style={styles.thumbnail}>
-        {/* TODO: reemplazar con imagen real usando expo-image o Image */}
-        <Text style={styles.thumbnailText}>{item.name.charAt(0)}</Text>
+    <View style={styles.card} testID={`project-card-${item.id}`}>
+      {/* Imagen del proyecto */}
+      <View style={styles.imageContainer}>
+        <Image source={{ uri: item.imagen }} style={styles.foto} resizeMode="cover" />
+        <View style={styles.tipoBadge}>
+          <Text style={styles.tipoBadgeText}>{item.tipoVivienda}</Text>
+        </View>
+        <Pressable
+          onPress={handleToggleBookmark}
+          style={({ pressed }) => [styles.favButton, pressed && { opacity: 0.7 }]}
+          hitSlop={8}
+          accessibilityLabel={isSaved ? 'Quitar de guardados' : 'Guardar proyecto'}
+        >
+          <Ionicons
+            name={isSaved ? 'heart' : 'heart-outline'}
+            size={22}
+            color={isSaved ? COLORS.error : '#ffffff'}
+          />
+        </Pressable>
       </View>
 
+      {/* Información del proyecto */}
       <View style={styles.cardContent}>
-        <Text style={styles.cardTitle} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text style={styles.cardDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
-        {/* TODO: agregar campos específicos de tu dominio aquí */}
-      </View>
+        <Text style={styles.nombre}>{item.name}</Text>
+        <View style={styles.infoRow}>
+          <Ionicons name="location-outline" size={14} color={COLORS.textSecondary} />
+          <Text style={styles.ciudad}>Ciudad: {item.ciudad}</Text>
+          <Text style={styles.dot}>•</Text>
+          <Text style={styles.area}>{item.area} m²</Text>
+        </View>
 
-      <Text style={styles.chevron}>›</Text>
-    </Pressable>
+        <View style={styles.precioRow}>
+          <View>
+            <Text style={styles.labelAhorro}>Aporte mensual solidario:</Text>
+            <Text style={styles.ahorroMensual}>{item.ahorroMensual}</Text>
+          </View>
+          <View style={styles.totalPriceRight}>
+            <Text style={styles.labelPrecio}>Precio total:</Text>
+            <Text style={styles.precio}>{item.precio}</Text>
+          </View>
+        </View>
+
+        {/* Botón para ver detalles */}
+        <Pressable
+          style={({ pressed }) => [styles.botonDetalles, pressed && styles.botonPressed]}
+          onPress={onPress}
+        >
+          <Text style={styles.textoBoton}>Ver detalles</Text>
+          <Ionicons name="chevron-forward" size={16} color="#ffffff" />
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
-// ============================================================
-// PANTALLA: HomeScreen
-// ============================================================
+function HeaderUsuario(): React.JSX.Element {
+  return (
+    <View style={styles.headerBox}>
+      <View style={styles.cajaUsuario}>
+        <View style={styles.avatarCircle}>
+          <Ionicons name="person" size={20} color={COLORS.primary} />
+        </View>
+        <View style={styles.usuarioInfo}>
+          <Text style={styles.textoUsuario}>Hola, Asociado(a)</Text>
+          <Text style={styles.textoAhorro}>Tu ahorro para vivienda es: <Text style={styles.montoAhorro}>$10.000.000</Text></Text>
+        </View>
+      </View>
+      <Text style={styles.tituloLista}>Proyectos de Vivienda Disponibles:</Text>
+    </View>
+  );
+}
 
 export function HomeScreen(): React.JSX.Element {
   const navigation = useNavigation<HomeScreenNavProp>();
-
-  // TODO: leer los ítems desde un Zustand store (opcional bonus)
-  // o desde la API real de tu dominio (semana 5 — TanStack Query)
   const items = ITEMS;
 
   const renderItem: ListRenderItem<Item> = ({ item }) => (
-    <ItemCard
+    <ProjectCard
       item={item}
       onPress={() =>
         navigation.navigate('HomeDetail', { id: item.id, name: item.name })
@@ -88,23 +136,14 @@ export function HomeScreen(): React.JSX.Element {
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
-        // TODO: agregar un header con estadísticas (total de ítems, etc.)
-        ListHeaderComponent={
-          <Text style={styles.sectionLabel}>
-            {items.length} ítem{items.length !== 1 ? 's' : ''}
-          </Text>
-        }
+        ListHeaderComponent={<HeaderUsuario />}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No hay ítems disponibles.</Text>
+          <Text style={styles.emptyText}>No hay proyectos de vivienda disponibles.</Text>
         }
       />
     </View>
   );
 }
-
-// ============================================================
-// ESTILOS
-// ============================================================
 
 const styles = StyleSheet.create({
   container: {
@@ -115,54 +154,166 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     paddingBottom: SPACING.xl,
   },
-  sectionLabel: {
-    ...TYPOGRAPHY.label,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: SPACING.sm,
-  },
   separator: {
-    height: SPACING.sm,
+    height: SPACING.md,
   },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.md,
+  headerBox: {
+    marginBottom: SPACING.md,
+    gap: SPACING.sm,
+  },
+  cajaUsuario: {
+    backgroundColor: COLORS.surface,
     padding: SPACING.md,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: SPACING.md,
   },
-  cardPressed: {
-    opacity: 0.7,
-  },
-  thumbnail: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.sm,
-    backgroundColor: COLORS.surface,
+  avatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  thumbnailText: {
+  usuarioInfo: {
+    flex: 1,
+  },
+  textoUsuario: {
     ...TYPOGRAPHY.h3,
-    color: COLORS.accent,
+    color: COLORS.textPrimary,
+  },
+  textoAhorro: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  montoAhorro: {
+    fontWeight: '700',
+    color: COLORS.price,
+  },
+  tituloLista: {
+    ...TYPOGRAPHY.h2,
+    color: COLORS.textPrimary,
+    marginTop: SPACING.xs,
+  },
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 160,
+  },
+  foto: {
+    width: '100%',
+    height: '100%',
+  },
+  tipoBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(0, 85, 170, 0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: RADIUS.xs,
+  },
+  tipoBadgeText: {
+    ...TYPOGRAPHY.label,
+    color: '#ffffff',
+    fontSize: 11,
+  },
+  favButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cardContent: {
-    flex: 1,
+    padding: SPACING.md,
     gap: SPACING.xs,
   },
-  cardTitle: {
-    ...TYPOGRAPHY.body,
-    fontWeight: '600',
-  },
-  cardDescription: {
-    ...TYPOGRAPHY.caption,
-  },
-  chevron: {
+  nombre: {
     ...TYPOGRAPHY.h2,
+    color: COLORS.textPrimary,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ciudad: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textSecondary,
+  },
+  dot: {
     color: COLORS.textMuted,
+  },
+  area: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textSecondary,
+  },
+  precioRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginVertical: SPACING.xs,
+    paddingTop: SPACING.xs,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+  },
+  labelAhorro: {
+    ...TYPOGRAPHY.label,
+    fontSize: 10,
+    color: COLORS.textMuted,
+  },
+  ahorroMensual: {
+    ...TYPOGRAPHY.body,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  totalPriceRight: {
+    alignItems: 'flex-end',
+  },
+  labelPrecio: {
+    ...TYPOGRAPHY.label,
+    fontSize: 10,
+    color: COLORS.textMuted,
+  },
+  precio: {
+    ...TYPOGRAPHY.body,
+    fontWeight: '700',
+    color: COLORS.price,
+  },
+  botonDetalles: {
+    backgroundColor: COLORS.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 10,
+    borderRadius: RADIUS.sm,
+    marginTop: SPACING.xs,
+  },
+  botonPressed: {
+    opacity: 0.85,
+  },
+  textoBoton: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
   emptyText: {
     ...TYPOGRAPHY.body,

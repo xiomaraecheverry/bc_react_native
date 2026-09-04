@@ -1,18 +1,17 @@
 // src/navigation/types.ts
-// Tipos de parámetros para los navigators del proyecto.
+// Tipos de parámetros de navegación para el proyecto Cooperativa de Vivienda
 
-export type RootTabParamList = {
-  Home: undefined;
-  Saved: undefined;
-};
+import type { NavigatorScreenParams } from '@react-navigation/native';
 
 export type HomeStackParamList = {
   HomeList: undefined;
-  // TODO: agrega campos extra según tu dominio
-  // Ejemplo (Biblioteca):  author: string; isbn: string;
-  // Ejemplo (Cine):        director: string; year: number;
   HomeDetail: {
     id: string;
     name: string;
   };
+};
+
+export type RootTabParamList = {
+  Home: NavigatorScreenParams<HomeStackParamList>;
+  Saved: undefined;
 };

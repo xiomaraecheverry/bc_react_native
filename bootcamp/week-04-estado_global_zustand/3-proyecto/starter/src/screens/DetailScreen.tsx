@@ -1,169 +1,328 @@
 // src/screens/DetailScreen.tsx
-// Pantalla de detalle: muestra la información completa de un ítem
-// y permite guardarlo / quitarlo usando el store de Zustand.
-// Esta pantalla demuestra cómo acceder al store desde cualquier screen.
+// Pantalla de detalle del proyecto de vivienda con botón interactivo de Zustand
 
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useRoute, type RouteProp } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
+import { ITEMS } from '../data/mockData';
+import { useSavedStore } from '../stores/savedStore';
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
+import type { Item } from '../types';
 import type { HomeStackParamList } from '../navigation/types';
-
-// TODO: importar el store y el tipo Item
-// import { useSavedStore } from '../stores/savedStore';
-// import type { Item } from '../types';
-// import { ITEMS } from '../data/mockData';
 
 type DetailRouteProp = RouteProp<HomeStackParamList, 'HomeDetail'>;
 
-// ============================================================
-// PANTALLA: DetailScreen
-// ============================================================
-
 export function DetailScreen(): React.JSX.Element {
   const route = useRoute<DetailRouteProp>();
-  const { id, name } = route.params;
+  const { id } = route.params;
 
-  // TODO: buscar el ítem completo en ITEMS usando el id de params
-  // const item: Item | undefined = ITEMS.find((i) => i.id === id);
+  const item: Item | undefined = ITEMS.find((i) => i.id === id);
 
-  // ──────────────────────────────────────────────────────────
-  // TODO: obtener los selectores del savedStore
-  // ──────────────────────────────────────────────────────────
-  // Usar selectores individuales para evitar re-renders innecesarios:
-  //
-  // const isItemSaved = useSavedStore((state) => state.isItemSaved);
-  // const addItem    = useSavedStore((state) => state.addItem);
-  // const removeItem = useSavedStore((state) => state.removeItem);
-  //
-  // Luego calcular si el ítem actual está guardado:
-  // const isSaved = isItemSaved(id);
+  // Selectores atómicos de Zustand
+  const isSaved = useSavedStore((state) => state.isItemSaved(id));
+  const addItem = useSavedStore((state) => state.addItem);
+  const removeItem = useSavedStore((state) => state.removeItem);
 
-  // Placeholder hasta que el store esté implementado
-  const isSaved = false;
-
-  // TODO: implementar handleToggleSave
-  // Si el ítem está guardado → removeItem(id)
-  // Si no está guardado → addItem(item)  [necesitas el objeto Item completo]
   const handleToggleSave = (): void => {
-    // TODO: implementar
-    // if (isSaved) {
-    //   removeItem(id);
-    // } else if (item) {
-    //   addItem(item);
-    // }
+    if (!item) return;
+    if (isSaved) {
+      removeItem(id);
+    } else {
+      addItem(item);
+    }
   };
 
+  if (!item) {
+    return (
+      <View style={styles.notFoundContainer}>
+        <Text style={styles.notFoundText}>No se encontró el proyecto seleccionado.</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      {/* Icono / thumbnail del ítem */}
-      <View style={styles.hero}>
-        <Text style={styles.heroLetter}>{name.charAt(0)}</Text>
+    <View style={styles.mainContainer}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Imagen principal del proyecto */}
+        <View style={styles.imageWrap}>
+          <Image source={{ uri: item.imagen }} style={styles.foto} resizeMode="cover" />
+          <View style={styles.tipoBadge}>
+            <Text style={styles.tipoBadgeText}>{item.tipoVivienda}</Text>
+          </View>
+        </View>
+
+        {/* Información general */}
+        <View style={styles.card}>
+          <Text style={styles.title}>{item.name}</Text>
+          <View style={styles.locationRow}>
+            <Ionicons name="location" size={16} color={COLORS.primary} />
+            <Text style={styles.locationText}>Ciudad: {item.ciudad}</Text>
+          </View>
+        </View>
+
+        {/* Resumen de aportes y precios */}
+        <View style={styles.card}>
+          <Text style={styles.sectionHeader}>Plan Financiero Cooperativo</Text>
+          <View style={styles.financialRow}>
+            <View style={styles.financialBox}>
+              <Text style={styles.finLabel}>Aporte Mensual</Text>
+              <Text style={styles.finValueGreen}>{item.ahorroMensual}</Text>
+              <Text style={styles.finSub}>Cuota solidaria</Text>
+            </View>
+            <View style={styles.financialBox}>
+              <Text style={styles.finLabel}>Precio Total</Text>
+              <Text style={styles.finValueBlue}>{item.precio}</Text>
+              <Text style={styles.finSub}>Valor estimado</Text>
+            </View>
+          </View>
+          {item.subsidio && (
+            <View style={styles.subsidyNote}>
+              <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
+              <Text style={styles.subsidyText}>Aplica a subsidio de vivienda para asociados</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Especificaciones */}
+        <View style={styles.card}>
+          <Text style={styles.sectionHeader}>Características del Inmueble</Text>
+          <View style={styles.specsGrid}>
+            <View style={styles.specItem}>
+              <Ionicons name="resize" size={20} color={COLORS.primary} />
+              <Text style={styles.specValue}>{item.area} m²</Text>
+              <Text style={styles.specLabel}>Área Total</Text>
+            </View>
+            <View style={styles.specItem}>
+              <Ionicons name="bed" size={20} color={COLORS.primary} />
+              <Text style={styles.specValue}>{item.habitaciones}</Text>
+              <Text style={styles.specLabel}>Habitaciones</Text>
+            </View>
+            <View style={styles.specItem}>
+              <Ionicons name="water" size={20} color={COLORS.primary} />
+              <Text style={styles.specValue}>{item.banos}</Text>
+              <Text style={styles.specLabel}>Baños</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Descripción */}
+        <View style={styles.card}>
+          <Text style={styles.sectionHeader}>Descripción del Proyecto</Text>
+          <Text style={styles.description}>{item.descripcion}</Text>
+        </View>
+      </ScrollView>
+
+      {/* Botón flotante inferior conectado al store de Zustand */}
+      <View style={styles.bottomBar}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.actionButton,
+            isSaved ? styles.actionButtonSaved : styles.actionButtonDefault,
+            pressed && styles.actionButtonPressed,
+          ]}
+          onPress={handleToggleSave}
+          testID="save-button"
+        >
+          <Ionicons
+            name={isSaved ? 'trash-outline' : 'heart'}
+            size={18}
+            color="#ffffff"
+          />
+          <Text style={styles.actionButtonText}>
+            {isSaved ? 'Quitar de Guardados' : 'Guardar en Mis Proyectos'}
+          </Text>
+        </Pressable>
       </View>
-
-      {/* Información principal */}
-      <View style={styles.info}>
-        <Text style={styles.title}>{name}</Text>
-        <Text style={styles.id}>ID: {id}</Text>
-
-        {/* TODO: mostrar la descripción del ítem (item.description) */}
-        {/* TODO: mostrar campos específicos de tu dominio */}
-        <Text style={styles.description}>
-          Adapta esta pantalla a tu dominio: muestra los detalles
-          relevantes de tu ítem aquí.
-        </Text>
-      </View>
-
-      {/* ──────────────────────────────────────────────────── */}
-      {/* BOTÓN GUARDAR / QUITAR — conectado al store Zustand  */}
-      {/* ──────────────────────────────────────────────────── */}
-      {/* Este botón demuestra el estado compartido entre pantallas:
-          al guardar aquí, el badge del Tab "Guardados" se actualiza
-          automáticamente sin necesidad de pasar props ni callbacks. */}
-      <Pressable
-        style={({ pressed }) => [
-          styles.saveButton,
-          isSaved && styles.saveButtonActive,
-          pressed && styles.saveButtonPressed,
-        ]}
-        onPress={handleToggleSave}
-        testID="save-button"
-      >
-        <Text style={[styles.saveButtonText, isSaved && styles.saveButtonTextActive]}>
-          {isSaved ? '★  Guardado' : '☆  Guardar'}
-        </Text>
-      </Pressable>
     </View>
   );
 }
 
-// ============================================================
-// ESTILOS
-// ============================================================
-
 const styles = StyleSheet.create({
-  container: {
+  mainContainer: {
     flex: 1,
     backgroundColor: COLORS.background,
-    padding: SPACING.lg,
-    gap: SPACING.lg,
   },
-  hero: {
-    width: 96,
-    height: 96,
-    borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.card,
+  scrollContent: {
+    padding: SPACING.md,
+    paddingBottom: 85,
+    gap: SPACING.md,
+  },
+  notFoundContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  notFoundText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textSecondary,
+  },
+  imageWrap: {
+    position: 'relative',
+    width: '100%',
+    height: 200,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+  },
+  foto: {
+    width: '100%',
+    height: '100%',
+  },
+  tipoBadge: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.xs,
+  },
+  tipoBadgeText: {
+    ...TYPOGRAPHY.label,
+    color: '#ffffff',
+  },
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-  },
-  heroLetter: {
-    fontSize: 40,
-    fontWeight: '700',
-    color: COLORS.accent,
-  },
-  info: {
-    gap: SPACING.sm,
+    gap: SPACING.xs,
   },
   title: {
-    ...TYPOGRAPHY.h2,
+    ...TYPOGRAPHY.h1,
+    color: COLORS.textPrimary,
   },
-  id: {
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  locationText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textSecondary,
+  },
+  sectionHeader: {
     ...TYPOGRAPHY.label,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
+    color: COLORS.textMuted,
+    marginBottom: 4,
+  },
+  financialRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  financialBox: {
+    flex: 1,
+    backgroundColor: COLORS.cardSecondary,
+    borderRadius: RADIUS.sm,
+    padding: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  finLabel: {
+    ...TYPOGRAPHY.label,
+    fontSize: 10,
+    color: COLORS.textMuted,
+  },
+  finValueGreen: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.price,
+    marginTop: 2,
+  },
+  finValueBlue: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.primary,
+    marginTop: 2,
+  },
+  finSub: {
+    ...TYPOGRAPHY.caption,
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+  subsidyNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: SPACING.xs,
+    paddingTop: SPACING.xs,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+  },
+  subsidyText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.success,
+    fontWeight: '600',
+  },
+  specsGrid: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  specItem: {
+    flex: 1,
+    backgroundColor: COLORS.cardSecondary,
+    borderRadius: RADIUS.sm,
+    padding: SPACING.sm,
+    alignItems: 'center',
+    gap: 2,
+  },
+  specValue: {
+    ...TYPOGRAPHY.body,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  specLabel: {
+    ...TYPOGRAPHY.label,
+    fontSize: 10,
+    color: COLORS.textMuted,
   },
   description: {
     ...TYPOGRAPHY.body,
     color: COLORS.textSecondary,
-    lineHeight: 24,
-    marginTop: SPACING.sm,
+    lineHeight: 22,
   },
-  saveButton: {
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingVertical: SPACING.md,
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    padding: SPACING.md,
+  },
+  actionButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 'auto',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: RADIUS.sm,
   },
-  saveButtonActive: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
+  actionButtonDefault: {
+    backgroundColor: COLORS.primary,
   },
-  saveButtonPressed: {
-    opacity: 0.7,
+  actionButtonSaved: {
+    backgroundColor: COLORS.error,
   },
-  saveButtonText: {
-    ...TYPOGRAPHY.body,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
+  actionButtonPressed: {
+    opacity: 0.85,
   },
-  saveButtonTextActive: {
-    color: COLORS.background,
+  actionButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
